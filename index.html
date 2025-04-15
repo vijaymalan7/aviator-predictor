@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crash Game</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #0a0a0a;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: white;
+    }
+    
+    .game-container {
+      position: relative;
+      width: 320px;
+      height: 600px;
+      background: linear-gradient(135deg, rgba(70, 0, 20, 0.8), rgba(30, 0, 10, 1));
+      border-radius: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px;
+      box-sizing: border-box;
+      box-shadow: 0 0 30px rgba(255, 50, 80, 0.3);
+    }
+    
+    .stars {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+    
+    .star {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      background-color: white;
+      border-radius: 50%;
+    }
+    
+    .red-star {
+      background-color: rgba(255, 70, 90, 0.8);
+    }
+    
+    .multiplier-container {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex-grow: 1;
+    }
+    
+    .rocket {
+      width: 50px;
+      height: 50px;
+      position: absolute;
+      top: -80px;
+      transform: rotate(45deg);
+      z-index: 3;
+    }
+    
+    .multiplier-circle {
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: rgba(255, 50, 80, 0.2);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      transition: all 0.3s;
+    }
+    
+    .multiplier-circle:before {
+      content: '';
+      position: absolute;
+      width: 190px;
+      height: 190px;
+      border-radius: 50%;
+      border: 2px dashed rgba(255, 80, 100, 0.6);
+    }
+    
+    .multiplier-circle.active {
+      background: rgba(255, 50, 80, 0.4);
+      box-shadow: 0 0 30px rgba(255, 50, 80, 0.6);
+    }
+    
+    .multiplier-value {
+      font-size: 64px;
+      font-weight: bold;
+      color: white;
+      position: relative;
+      z-index: 3;
+      transition: all 0.3s;
+    }
+    
+    /* Animated border rings */
+    .border-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 80, 100, 0.7);
+      width: 220px;
+      height: 220px;
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    
+    .border-ring.animated {
+      animation: pulse-ring 1.5s ease-out infinite;
+    }
+    
+    @keyframes pulse-ring {
+      0% {
+        transform: scale(0.95);
+        opacity: 0.8;
+      }
+      50% {
+        opacity: 0.4;
+      }
+      100% {
+        transform: scale(1.25);
+        opacity: 0;
+      }
+    }
+    
+    /* Rotating border */
+    .rotating-border {
+      position: absolute;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    .rotating-border.active {
+      opacity: 1;
+    }
+    
+    .rotating-border::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      border-top-color: #ff3a5e;
+      border-right-color: rgba(255, 58, 94, 0.5);
+      animation: rotate 2s linear infinite;
+    }
+    
+    @keyframes rotate {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .button-container {
+      width: 100%;
+      padding: 20px 0;
+      z-index: 2;
+    }
+    
+    .launch-button {
+      width: 100%;
+      background: linear-gradient(to right, #ff3a5e, #ff5477);
+      color: white;
+      border: none;
+      border-radius: 40px;
+      padding: 20px;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 10px rgba(255, 50, 80, 0.5);
+    }
+    
+    .launch-button:hover {
+      background: linear-gradient(to right, #ff5477, #ff3a5e);
+      transform: translateY(-2px);
+    }
+    
+    .launch-button:active {
+      transform: translateY(1px);
+    }
+    
+    .launch-button:disabled {
+      background: linear-gradient(to right, #c33, #c55);
+      cursor: not-allowed;
+      opacity: 0.8;
+    }
+    
+    .timer {
+      display: none;
+      font-size: 24px;
+      font-weight: bold;
+      color: white;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    
+    @keyframes rocketLaunch {
+      0% { transform: translateY(0) rotate(45deg); }
+      100% { transform: translateY(-300px) rotate(45deg); }
+    }
+    
+    .rocket.launching {
+      animation: rocketLaunch 3s ease-out forwards;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <div class="stars" id="stars"></div>
+    
+    <div class="multiplier-container">
+      <svg class="rocket" id="rocket" viewBox="0 0 24 24" width="50" height="50">
+        <path fill="#ff4060" d="M13.13,22.19L11.5,18.36C13.07,17.78 14.54,17 15.9,16.09L13.13,22.19M5.64,12.5L1.81,10.87L7.91,8.1C7,9.46 6.22,10.93 5.64,12.5M19.22,4C19.5,4 19.75,4.08 19.94,4.23C21.24,5.34 22,8.27 22,13C22,17.73 21.24,20.66 19.94,21.77C19.75,21.92 19.5,22 19.22,22H19.21C16.64,22 14.14,17.86 12.65,11.67C12.06,8.69 11.95,6.07 12.16,4.13C12.16,4.09 12.17,4.04 12.17,4C12.17,4 12.24,4 12.14,4C15.8,4 18.25,4 19.21,4H19.22M2,13C2,13.55 5.07,14 9,14C12.93,14 16,13.55 16,13C16,12.45 12.93,12 9,12C5.07,12 2,12.45 2,13Z" />
+      </svg>
+      
+      <div class="multiplier-circle" id="multiplierCircle">
+        <div class="multiplier-value" id="multiplier">1.01x</div>
+      </div>
+      
+      <!-- Border animations -->
+      <div class="border-ring" id="borderRing1"></div>
+      <div class="border-ring" id="borderRing2"></div>
+      <div class="rotating-border" id="rotatingBorder"></div>
+    </div>
+    
+    <div class="button-container">
+      <div class="timer" id="timer"></div>
+      <button class="launch-button" id="launchButton">LAUNCH NEXT FLIGHT</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const starsContainer = document.getElementById('stars');
+      const multiplierDisplay = document.getElementById('multiplier');
+      const multiplierCircle = document.getElementById('multiplierCircle');
+      const launchButton = document.getElementById('launchButton');
+      const timerDisplay = document.getElementById('timer');
+      const rocket = document.getElementById('rocket');
+      const borderRing1 = document.getElementById('borderRing1');
+      const borderRing2 = document.getElementById('borderRing2');
+      const rotatingBorder = document.getElementById('rotatingBorder');
+      
+      // Create stars
+      for (let i = 0; i < 50; i++) {
+        const star = document.createElement('div');
+        star.classList.add('star');
+        if (Math.random() > 0.7) star.classList.add('red-star');
+        star.style.left = Math.random() * 100 + '%';
+        star.style.top = Math.random() * 100 + '%';
+        star.style.opacity = Math.random() * 0.8 + 0.2;
+        starsContainer.appendChild(star);
+      }
+      
+      let countdown;
+      let isAnimating = false;
+      
+      launchButton.addEventListener('click', function() {
+        if (isAnimating) return;
+        
+        // Add visual feedback for button click
+        this.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+          this.style.transform = '';
+        }, 100);
+        
+        isAnimating = true;
+        launchButton.disabled = true;
+        timerDisplay.style.display = 'block';
+        
+        // Start countdown
+        let secondsLeft = 7;
+        timerDisplay.textContent = `Wait ${secondsLeft}s`;
+        
+        // Start rotating border during countdown
+        rotatingBorder.classList.add('active');
+        
+        countdown = setInterval(function() {
+          secondsLeft--;
+          timerDisplay.textContent = `Wait ${secondsLeft}s`;
+          
+          if (secondsLeft <= 0) {
+            clearInterval(countdown);
+            startPrediction();
+          }
+        }, 1000);
+      });
+      
+      function startPrediction() {
+        timerDisplay.style.display = 'none';
+        multiplierCircle.classList.add('active');
+        rocket.classList.add('launching');
+        
+        // Activate pulsing border rings
+        borderRing1.classList.add('animated');
+        
+        // Add delay for second ring
+        setTimeout(() => {
+          borderRing2.classList.add('animated');
+        }, 500);
+        
+        // Generate random multiplier between 1.01 and 5.00
+        const finalMultiplier = (Math.random() * 3.99 + 1.01).toFixed(2);
+        const steps = 15;
+        let currentStep = 0;
+        
+        const animInterval = setInterval(function() {
+          currentStep++;
+          const progress = currentStep / steps;
+          const currentValue = (1.01 + progress * (finalMultiplier - 1.01)).toFixed(2);
+          
+          multiplierDisplay.textContent = currentValue + 'x';
+          
+          // Make the display pulse with each update
+          multiplierDisplay.style.transform = 'scale(1.1)';
+          setTimeout(() => {
+            multiplierDisplay.style.transform = '';
+          }, 50);
+          
+          if (currentStep >= steps) {
+            clearInterval(animInterval);
+            multiplierDisplay.textContent = finalMultiplier + 'x';
+            
+            // Make the final value pop
+            multiplierDisplay.style.transform = 'scale(1.2)';
+            multiplierDisplay.style.color = '#ffff00';
+            setTimeout(() => {
+              multiplierDisplay.style.transform = '';
+            }, 200);
+            
+            setTimeout(function() {
+              resetGame();
+            }, 3000);
+          }
+        }, 200);
+      }
+      
+      function resetGame() {
+        isAnimating = false;
+        launchButton.disabled = false;
+        multiplierDisplay.textContent = '1.01x';
+        multiplierDisplay.style.color = 'white';
+        multiplierCircle.classList.remove('active');
+        rocket.classList.remove('launching');
+        
+        // Reset border animations
+        borderRing1.classList.remove('animated');
+        borderRing2.classList.remove('animated');
+        rotatingBorder.classList.remove('active');
+      }
+    });
+  </script>
+</body>
+</html>
